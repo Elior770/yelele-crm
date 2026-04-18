@@ -5,13 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YELELE – CRM Label</title>
 
-<!-- Firebase SDK -->
+<!-- Firebase CDN (version compatible avec HTML simple) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
 <style>
@@ -39,82 +37,59 @@ body::before {
   pointer-events: none;
 }
 
-.glass { background: var(--glass); border: 1px solid var(--border); backdrop-filter: blur(24px); }
 .glass-dark { background: rgba(8,8,16,0.6); border: 1px solid var(--border); backdrop-filter: blur(24px); }
-
-.login-card { width: 100%; max-width: 420px; border-radius: 32px; padding: 48px 40px; position: relative; overflow: hidden; }
+.login-card { width: 100%; max-width: 420px; border-radius: 32px; padding: 48px 40px; }
 .logo-icon { width: 80px; height: 80px; border-radius: 24px; background: linear-gradient(135deg, #C9A84C 0%, #8a5ac8 100%); display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 20px; box-shadow: 0 8px 32px rgba(201,168,76,0.4); }
 .brand-title { font-size: 48px; font-weight: 800; text-align: center; letter-spacing: -2px; background: linear-gradient(135deg, var(--gold), #fff 50%, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.btn-gold { width: 100%; background: linear-gradient(135deg, #C9A84C, #8a5ac8); border: none; border-radius: 16px; padding: 16px; font-size: 16px; font-weight: 600; color: white; cursor: pointer; }
 .inp { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px 20px; font-size: 15px; color: var(--text); margin-bottom: 16px; }
+.btn-gold { width: 100%; background: linear-gradient(135deg, #C9A84C, #8a5ac8); border: none; border-radius: 16px; padding: 16px; font-size: 16px; font-weight: 600; color: white; cursor: pointer; }
 
-.topbar { background: rgba(8,8,16,0.8); border-bottom: 1px solid var(--border); padding: 0 28px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
-.collab-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 24px; padding: 28px; text-align: center; }
-.btn-primary { background: linear-gradient(135deg, #C9A84C, #8a5ac8); border: none; border-radius: 14px; padding: 12px 24px; color: white; cursor: pointer; }
-.btn-secondary { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 14px; padding: 11px 20px; color: var(--text); cursor: pointer; }
-
-.toast { position: fixed; bottom: 28px; right: 28px; background: var(--bg2); border: 1px solid rgba(52,199,89,0.4); border-radius: 16px; padding: 16px 24px; color: #34c759; z-index: 99999; }
+.collab-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 24px; padding: 28px; text-align: center; margin-bottom: 16px; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg2); border: 1px solid #34c759; border-radius: 16px; padding: 16px 24px; color: #34c759; z-index: 9999; }
 .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
+<!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card glass-dark">
     <div class="logo-icon">🎵</div>
     <div class="brand-title">YELELE</div>
     <div class="brand-sub">Label • CRM</div>
-    <input id="login-id" class="inp" type="text" placeholder="Identifiant (ex: ADMIN)">
+    <input id="login-id" class="inp" type="text" placeholder="Identifiant">
     <input id="login-password" class="inp" type="password" placeholder="Mot de passe">
     <button class="btn-gold" onclick="handleLogin()">Connexion 🚀</button>
   </div>
 </div>
 
 <!-- MAIN APP -->
-<div id="main-app" class="hidden">
-  <div class="topbar">
-    <div class="topbar-brand">YELELE</div>
-    <div>
-      <span id="user-role-badge" class="badge-role"></span>
-      <button onclick="logout()" class="btn-secondary">Déconnexion</button>
-    </div>
-  </div>
-
-  <div style="padding: 40px;">
-    <h1 style="font-size: 32px; margin-bottom: 20px;">👥 Équipe</h1>
-    <button class="btn-primary" onclick="openModal('add-collab')" style="margin-bottom: 20px;">+ Nouveau membre</button>
-    <div id="collab-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;"></div>
-  </div>
+<div id="main-app" class="hidden" style="padding:20px;">
+  <h1 style="color:var(--gold); margin-bottom:20px;">👥 Équipe</h1>
+  <button onclick="openAddMemberModal()" class="btn-gold" style="margin-bottom:20px;">+ Nouveau membre</button>
+  <div id="team-list"></div>
 </div>
 
-<!-- MODALS -->
-<div id="modal-add-collab" class="modal-overlay hidden">
-  <div class="modal-box">
-    <h2>Nouveau membre</h2>
-    <input id="nc-name" class="inp" placeholder="Nom complet">
-    <select id="nc-role" class="inp">
+<!-- Modal Nouveau membre -->
+<div id="modal-add-member" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);padding:30px;border-radius:20px;width:90%;max-width:400px;">
+    <h2 style="margin-bottom:20px;">Nouveau membre</h2>
+    <input id="member-name" class="inp" placeholder="Nom complet" style="margin-bottom:15px;">
+    <select id="member-role" class="inp" style="margin-bottom:20px;">
       <option value="Artiste">Artiste</option>
       <option value="Marketing">Marketing</option>
       <option value="Production">Production</option>
       <option value="BeatMaker">BeatMaker</option>
     </select>
-    <button onclick="createCollab()" class="btn-primary">Créer</button>
-    <button onclick="closeModal('add-collab')" class="btn-secondary">Annuler</button>
-  </div>
-</div>
-
-<div id="modal-cred" class="modal-overlay hidden">
-  <div class="modal-box">
-    <h2>Identifiants créés</h2>
-    <p>ID : <strong id="cred-id"></strong></p>
-    <p>Mot de passe : <strong id="cred-pw"></strong></p>
-    <button onclick="closeModal('cred')" class="btn-primary">OK</button>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeAddMemberModal()" class="btn-gold" style="background:#555;flex:1;">Annuler</button>
+      <button onclick="createMember()" class="btn-gold" style="flex:1;">Créer le membre</button>
+    </div>
   </div>
 </div>
 
 <script>
-// ==================== FIREBASE CONFIG ====================
+// ==================== FIREBASE CONFIG (ton code) ====================
 const firebaseConfig = {
   apiKey: "AIzaSyDPxX9KrrnMoU0gXZA8gRli4Pv6BYlpnBo",
   authDomain: "yelele-6a16b.firebaseapp.com",
@@ -159,11 +134,11 @@ async function handleLogin() {
 }
 
 // ==================== CRÉER MEMBRE ====================
-async function createCollab() {
-  if (!isAdmin) return alert("Accès refusé");
+async function createMember() {
+  if (!isAdmin) return alert("Seul l'admin peut créer des membres");
 
-  const name = document.getElementById('nc-name').value.trim();
-  const role = document.getElementById('nc-role').value;
+  const name = document.getElementById('member-name').value.trim();
+  const role = document.getElementById('member-role').value;
 
   if (!name) return alert("Le nom est obligatoire");
 
@@ -176,78 +151,60 @@ async function createCollab() {
       name: name,
       role: role,
       password: password,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      createdAt: new Date()
     });
 
-    document.getElementById('cred-id').textContent = userId;
-    document.getElementById('cred-pw').textContent = password;
-    closeModal('add-collab');
-    openModal('cred');
-
-    alert(`Membre ${name} créé avec succès !`);
-    renderTeam();
+    alert(`Membre créé !\nID: ${userId}\nMot de passe: ${password}`);
+    closeAddMemberModal();
+    loadTeam();
   } catch (e) {
     alert("Erreur lors de la création");
   }
 }
 
-// ==================== AFFICHAGE ÉQUIPE ====================
-async function renderTeam() {
-  const grid = document.getElementById('collab-grid');
-  grid.innerHTML = "";
+// ==================== CHARGER L'ÉQUIPE ====================
+async function loadTeam() {
+  const list = document.getElementById('team-list');
+  list.innerHTML = "";
 
   const snapshot = await db.collection('users').get();
   snapshot.forEach(doc => {
-    const u = doc.data();
+    const user = doc.data();
     const div = document.createElement('div');
     div.className = "collab-card";
     div.innerHTML = `
-      <h3>${u.name}</h3>
-      <p>ID: ${u.id}</p>
-      <p>Rôle: ${u.role}</p>
-      <button onclick="deleteMember('${u.id}')" style="color:red;">Supprimer</button>
+      <strong>${user.name}</strong><br>
+      ID: ${user.id}<br>
+      Rôle: ${user.role}
     `;
-    grid.appendChild(div);
+    list.appendChild(div);
   });
 }
 
-async function deleteMember(id) {
-  if (confirm("Supprimer ce membre ?")) {
-    await db.collection('users').doc(id).delete();
-    renderTeam();
-  }
+// ==================== FONCTIONS MODAL ====================
+function openAddMemberModal() {
+  document.getElementById('modal-add-member').classList.remove('hidden');
 }
 
-// ==================== FONCTIONS UTILITAIRES ====================
+function closeAddMemberModal() {
+  document.getElementById('modal-add-member').classList.add('hidden');
+  document.getElementById('member-name').value = '';
+}
+
+// ==================== DÉMARRAGE ====================
 function startApp() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
-  renderTeam();
-}
-
-function openModal(name) {
-  document.getElementById(`modal-${name}`).classList.remove('hidden');
-}
-
-function closeModal(name) {
-  document.getElementById(`modal-${name}`).classList.add('hidden');
+  loadTeam();
 }
 
 function logout() {
   location.reload();
 }
 
-function toast(msg) {
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
-}
-
 // Lancement
 window.onload = () => {
-  console.log("YELELE CRM avec Firebase chargé");
+  console.log("YELELE CRM - Firebase chargé");
 };
 </script>
 </body>
