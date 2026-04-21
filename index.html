@@ -100,7 +100,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .mission-title{font-size:15px;font-weight:500;margin-bottom:4px;}
 .mission-meta{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
 .mission-desc{font-size:13px;color:var(--muted);margin-bottom:6px;}
-/* MISSION ACTION BUTTONS — NOUVEAU */
+/* MISSION ACTION BUTTONS */
 .mission-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
 .btn-accept{background:rgba(52,199,89,0.12);border:1px solid rgba(52,199,89,0.35);border-radius:10px;padding:7px 14px;font-size:12px;font-family:'Syne',sans-serif;font-weight:600;color:#34c759;cursor:pointer;transition:all 0.2s;}
 .btn-accept:hover{background:rgba(52,199,89,0.25);}
@@ -108,6 +108,15 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 .btn-refuse:hover{background:rgba(255,59,48,0.22);}
 .btn-done{background:linear-gradient(135deg,rgba(201,168,76,0.2),rgba(138,90,200,0.2));border:1px solid rgba(201,168,76,0.35);border-radius:10px;padding:7px 14px;font-size:12px;font-family:'Syne',sans-serif;font-weight:600;color:var(--gold);cursor:pointer;transition:all 0.2s;}
 .btn-done:hover{background:linear-gradient(135deg,rgba(201,168,76,0.35),rgba(138,90,200,0.35));}
+/* BOUTON RENDRE LE TRAVAIL */
+.btn-submit-work{background:linear-gradient(135deg,rgba(90,138,200,0.2),rgba(138,90,200,0.2));border:1px solid rgba(90,138,200,0.4);border-radius:10px;padding:7px 14px;font-size:12px;font-family:'Syne',sans-serif;font-weight:600;color:#5ba4ff;cursor:pointer;transition:all 0.2s;}
+.btn-submit-work:hover{background:linear-gradient(135deg,rgba(90,138,200,0.35),rgba(138,90,200,0.35));transform:translateY(-1px);}
+/* RENDU SOUMIS — visible Admin & Artiste */
+.work-submitted-box{margin-top:12px;background:rgba(91,164,255,0.07);border:1px solid rgba(91,164,255,0.25);border-radius:14px;padding:14px 16px;}
+.work-submitted-label{font-size:11px;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5ba4ff;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.work-submitted-content{font-size:13px;color:var(--text);line-height:1.5;word-break:break-word;}
+.work-submitted-link{color:#5ba4ff;text-decoration:underline;word-break:break-all;}
+.work-submitted-meta{font-size:11px;color:var(--muted);margin-top:6px;}
 /* RELEASES */
 .release-item{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.25s;margin-bottom:12px;}
 .release-item:hover{border-color:rgba(201,168,76,0.3);transform:translateX(4px);}
@@ -451,6 +460,30 @@ select.form-inp option{background:var(--bg2);color:var(--text);}
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     MODAL : Rendre le travail
+     Accessible uniquement au membre assigné (si mission acceptée)
+     ══════════════════════════════════════════ -->
+<div id="modal-submit-work" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('submit-work')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title">📤 Rendre le travail</div>
+    <input type="hidden" id="sw-mission-id">
+    <div class="form-group">
+      <label class="form-label">Lien (Drive, WeTransfer, SoundCloud…)</label>
+      <input id="sw-link" class="form-inp" type="url" placeholder="https://…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Commentaire / Note</label>
+      <textarea id="sw-comment" class="form-inp" rows="3" placeholder="Décris ton rendu, ce qui a été fait…"></textarea>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:-8px">Lien ou commentaire obligatoire (ou les deux).</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" style="flex:1" onclick="closeModal('submit-work')">Annuler</button>
+      <button class="btn-primary" style="flex:1" onclick="saveWork()">Envoyer 📤</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 //  FIREBASE
@@ -474,7 +507,7 @@ const COL_COLLABS='collaborators', COL_MISSIONS='missions', COL_RELEASES='releas
 const ALL_ROLES = [
   { name:'Artiste',                  emoji:'🎤' },
   { name:'Management',               emoji:'🤝' },
-  { name:'Directeur/Directrice artistique',     emoji:'🎨' },
+  { name:'Directeur Artistique',     emoji:'🎨' },
   { name:'Relation Presse',          emoji:'📰' },
   { name:'Marketing',                emoji:'📣' },
   { name:'Graphiste',                emoji:'🖌️' },
@@ -482,7 +515,7 @@ const ALL_ROLES = [
   { name:'Production',               emoji:'🎛️' },
   { name:'BeatMaker',                emoji:'🎶' },
   { name:'Ingénieur Son',            emoji:'🎧' },
-  { name:'Danseur/Danseuse',         emoji:'💃' },
+  { name:'Danseurs',                 emoji:'💃' },
   { name:'Assistant ',               emoji:'🙋🏽‍♂️' },
 ];
 const ROLE_EMOJIS = { CEO:'👑' };
@@ -500,6 +533,12 @@ function genId(){ return `USR-${Math.random().toString(36).substring(2,8).toUppe
 function genPw(){ return Math.random().toString(36).substring(2,10); }
 function getRoles(c){ return Array.isArray(c.roles)&&c.roles.length ? c.roles : (c.role?[c.role]:[]); }
 function getRolesHTML(c){ return getRoles(c).map(r=>`<span class="tag tag-purple">${ROLE_EMOJIS[r]||'👤'} ${r}</span>`).join(' '); }
+
+// Détermine si l'utilisateur courant peut voir les rendus (Admin ou Artiste)
+function canSeeWork(){
+  if(isAdmin) return true;
+  return getRoles(currentUser).includes('Artiste');
+}
 
 // ══════════════════════════════════════════
 //  FIREBASE INIT
@@ -727,7 +766,7 @@ function renderMissions(){
 }
 
 // ══════════════════════════════════════════
-//  RENDU MISSION — NOUVEAU : boutons membre
+//  RENDU MISSION
 // ══════════════════════════════════════════
 function renderMissionItem(m){
   const a=collaborators.find(c=>c.id===m.assignedTo);
@@ -754,6 +793,7 @@ function renderMissionItem(m){
       </div>`;
     } else if(st==='accepted'){
       actionBtns=`<div class="mission-actions">
+        <button class="btn-submit-work" onclick="openSubmitWork('${m.id}')">📤 Rendre le travail</button>
         <button class="btn-done" onclick="completeMission('${m.id}')">🏁 Terminer</button>
         <button class="btn-refuse" onclick="respondMission('${m.id}','refused')">❌ Refuser</button>
       </div>`;
@@ -762,6 +802,27 @@ function renderMissionItem(m){
         <button class="btn-accept" onclick="respondMission('${m.id}','accepted')">↩️ Accepter finalement</button>
       </div>`;
     }
+  }
+
+  // ── Bloc "Rendu soumis" — visible uniquement par Admin et Artiste ──
+  let workBlock='';
+  if(canSeeWork() && m.submittedWork){
+    const w=m.submittedWork;
+    const linkHTML=w.link?`<a href="${escHtml(w.link)}" target="_blank" class="work-submitted-link">🔗 ${escHtml(w.link)}</a>`:'';
+    const commentHTML=w.comment?`<div style="margin-top:${w.link?'8px':'0'}">${escHtml(w.comment)}</div>`:'';
+    const dateHTML=w.submittedAt?`<div class="work-submitted-meta">Rendu le ${formatDateTime(w.submittedAt)}</div>`:'';
+    workBlock=`
+      <div class="work-submitted-box">
+        <div class="work-submitted-label">📤 Travail rendu</div>
+        <div class="work-submitted-content">${linkHTML}${commentHTML}</div>
+        ${dateHTML}
+      </div>`;
+  }
+
+  // ── Indicateur "Rendu en attente" — visible membre assigné si déjà rendu ──
+  let workSentBadge='';
+  if(!isAdmin && !canSeeWork() && currentUser.id===m.assignedTo && m.submittedWork){
+    workSentBadge=`<span class="tag tag-blue" style="margin-top:8px;display:inline-flex">📤 Rendu envoyé</span>`;
   }
 
   return `<div class="mission-item" id="mission-${m.id}" style="${m.missionStatus==='refused'?'opacity:0.7;border-color:rgba(255,59,48,0.2)':''}">
@@ -777,13 +838,43 @@ function renderMissionItem(m){
         ${statusTag}
       </div>
       ${actionBtns}
+      ${workSentBadge}
+      ${workBlock}
     </div>
     ${isAdmin?`<button onclick="deleteMission('${m.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px" onmouseover="this.style.color='#ff453a'" onmouseout="this.style.color='var(--muted)'">🗑️</button>`:''}
   </div>`;
 }
 
 // ══════════════════════════════════════════
-//  ACTIONS MISSIONS MEMBRES — NOUVEAU
+//  RENDRE LE TRAVAIL — NOUVEAU
+// ══════════════════════════════════════════
+function openSubmitWork(missionId){
+  document.getElementById('sw-mission-id').value=missionId;
+  document.getElementById('sw-link').value='';
+  document.getElementById('sw-comment').value='';
+  openModal('submit-work');
+}
+
+async function saveWork(){
+  const missionId=document.getElementById('sw-mission-id').value;
+  const link=document.getElementById('sw-link').value.trim();
+  const comment=document.getElementById('sw-comment').value.trim();
+  if(!link && !comment) return toast('❌ Ajoute un lien ou un commentaire');
+  try{
+    await db.collection(COL_MISSIONS).doc(missionId).update({
+      submittedWork:{
+        link: link||'',
+        comment: comment||'',
+        submittedAt: new Date().toISOString()
+      }
+    });
+    closeModal('submit-work');
+    toast('📤 Travail rendu avec succès !');
+  } catch(e){ console.error(e); toast('❌ Erreur lors de l\'envoi'); }
+}
+
+// ══════════════════════════════════════════
+//  ACTIONS MISSIONS MEMBRES
 // ══════════════════════════════════════════
 async function respondMission(id, status){
   try{
@@ -976,6 +1067,8 @@ function showProfileModal(){
 //  UTILS
 // ══════════════════════════════════════════
 function formatDate(d){ return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}); }
+function formatDateTime(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; } }
+function escHtml(s){ const d=document.createElement('div'); d.appendChild(document.createTextNode(s)); return d.innerHTML; }
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.innerHTML=msg; document.body.appendChild(t); setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); },3000); }
 function logout(){ stopListeners(); location.reload(); }
 
